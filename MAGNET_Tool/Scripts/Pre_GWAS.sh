@@ -10,8 +10,12 @@ source /$LocSource/ConfigFiles/Thresholds.config
 
 check_tool "PLINK" $PLINK
 
+##### Settings ######
 
+# Adapt this to your data file!
 data_files_name="Subset_EUAIMS"
+##### End of Settings ######
+
 bim_file="$data_files_name.bim"
 bed_file="$data_files_name.bed"
 
