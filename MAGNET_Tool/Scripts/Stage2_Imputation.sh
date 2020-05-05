@@ -1,12 +1,21 @@
-#!/bin/bash 
+#!/bin/bash
 
-LocSource=$(pwd) 
+LocSource=$(pwd)
 
 source /$LocSource/ConfigFiles/Tools.config
 source /$LocSource/ConfigFiles/Thresholds.config
 
+if [ ! -d OUTPUT_DIR/Stage1_GenoQC ]; then
+	echo "Stage1 output directory 'OUTPUT_DIR/Stage1_GenoQC' missing, exiting."
+	exit 1
+fi
 
-cd OUTPUT_DIR/Stage1_GenoQC.sh 
+
+check_tool "PLINK" $PLINK
+check_tool "liftOver" $liftOver
+check_tool "SHAPEIT" $SHAPEIT
+
+cd OUTPUT_DIR/Stage1_GenoQC
 
 QCFile=FinalQC_Study #variable assigned to the final QC file from Stage1_GenoQC.sh
 
@@ -54,7 +63,7 @@ awk {'print $4 "\t" $3'} $hg19SNPs >  map.file
 $PLINK --bfile QC_autosomal --update-map map.file --make-bed --out QC_automsomal_Updated
 
 
-			
+
 echo -e							 ".........Map positions are updated.........\n"
 
 wait
@@ -77,7 +86,7 @@ echo -e "
 "
 
 
-echo -e 										"Preparing file for liftOver \n"    
+echo -e 										"Preparing file for liftOver \n"
 
 #Fill the middle column with 0 as we do not have the starting position of the snp and need to put "chr" before chromsome number, for preparing a bed file for liftover
 awk {'print $1 "\t" $4 "\t" $2'} QC_automsomal_Updated.bim |awk '$1 = $1 FS "0"'|awk '$1="chr"$1'> liftOverFile_Data.bed
@@ -98,7 +107,7 @@ then
 #Rename the final lifted file
 
 mv Data_lifted_afterhg.bed Data_liftedoutput_map
- 
+
 #Remove the unlifted SNPs
 
 cat Data_unlifted_afterhg.bed>Data_unliftedoutput_map
@@ -108,7 +117,7 @@ cat Data_unlifted_afterhg.bed>Data_unliftedoutput_map
 
 sed '/#/d' Data_unlifted_afterhg.bed>Data_unliftedoutput_map1
 
-#get rs names of unlifted snps; includes snps already in hg19 position 
+#get rs names of unlifted snps; includes snps already in hg19 position
 
 awk {'print $4'} Data_unliftedoutput_map1>Data_unliftedoutput_map3
 
@@ -119,7 +128,7 @@ $PLINK --bfile QC_automsomal_Updated --update-map Final_map --make-bed --out Dat
 
 else
 
-    echo "all SNPs mapped nothing to lift over or SNPs were already in hg19 annotation" 
+    echo "all SNPs mapped nothing to lift over or SNPs were already in hg19 annotation"
     cp QC_automsomal_Updated.bim  Data_liftedSNPs.bim
     cp QC_automsomal_Updated.bed  Data_liftedSNPs.bed
     cp QC_automsomal_Updated.fam  Data_liftedSNPs.fam
@@ -137,7 +146,7 @@ echo -e "
 ######################################################################################################
 "
 
-awk 'int($4)==0' Data_liftedSNPs.bim|wc -l 
+awk 'int($4)==0' Data_liftedSNPs.bim|wc -l
 
 awk 'int($4)==0' Data_liftedSNPs.bim|awk '{print $2}'> Data_noSNP_coordinates.txt
 
@@ -167,7 +176,7 @@ echo -e "
 
 echo -e "recheck missing hg19 annotations \n"
 
-awk {'print $2 "\t" $4'} Data_liftedSNPs_1.bim>Data_snps
+awk {'print $2 "\t" $4'} Data_liftedSNPs_1.bim > Data_snps
 
 echo -e "DataSNPs written \n"
 
@@ -177,7 +186,7 @@ then
     mv map.file hg19_snps
     echo -e "hg19file exists \n"
 else
-    awk {'print $4 "\t" $3'} $hg19SNPs> hg19_snps
+    awk {'print $4 "\t" $3'} $hg19SNPs > hg19_snps
     echo -e "hg19SNps written \n"
 fi
 
@@ -186,7 +195,7 @@ if [ -e Data_snps_sorted ]
 then
     echo "Data sorted file exists \n"
 else
-    
+
     sort Data_snps>Data_snps_sorted
     echo -e "Data SNPs sorted \n"
 fi
@@ -196,7 +205,7 @@ if [ -e hg19_snps_sorted ]
 then
     echo "hg19 sorted file exists \n"
 else
-    
+
     sort hg19_snps>hg19_snps_sorted
     echo -e "hg19 SNPs sorted \n"
 fi
@@ -204,21 +213,21 @@ fi
 
 
 # Find bp positions of SNPs in study data that are different from hg19 bp position of SNPs
- 
-comm -23 Data_snps_sorted hg19_snps_sorted>SNPs_notInHG19
+
+comm -23 Data_snps_sorted hg19_snps_sorted > SNPs_notInHG19
 
 
 
 echo "$(wc -l SNPs_notInHG19) SNPs have a different bp position than hg19, so they will be removed from the main file \n"
 
 
-# remove SNPS not HG19 annotated and not lifted 
+# remove SNPS not HG19 annotated and not lifted
 
 read count x <<< $(wc -l SNPs_notInHG19)
 
 if [ $count -gt 0 ]
 then
-    
+
     $PLINK --bfile Data_liftedSNPs_1 --exclude SNPs_notInHG19 --make-bed --out Data_lifted_hg19only
     echo "$count SNPs have been removed from the main file \n"
 
@@ -227,7 +236,7 @@ else
     cp  Data_liftedSNPs_1.bim Data_lifted_hg19only.bim
     cp  Data_liftedSNPs_1.bed Data_lifted_hg19only.bed
     echo "no SNPs have been removed all fine"
-    
+
 fi
 
 
@@ -304,7 +313,7 @@ $SHAPEIT -check -B Affected_Data_liftedSNPs"$i" \
         --input-ref $ShapeitRefHaps/1000GP_Phase3/1000GP_Phase3_chr"$i".hap.gz \
 	$ShapeitRefLegend/1000GP_Phase3/1000GP_Phase3_chr"$i".legend.gz \
 	$ShapeitRefSample/1000GP_Phase3/1000GP_Phase3.sample \
-        --output-log gwas.alignments"$i" 
+        --output-log gwas.alignments"$i"
 done
 END=$(date +%s) #~3 mins
 
@@ -409,15 +418,15 @@ wait
 echo -e "----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- \n"
 
 
-echo " 
-###################################################### 
+echo "
+######################################################
 ###### Exclude all the problematic snps###############
 ######################################################"
 
 for ((i=1;i<=22;i++))
 do
     echo "chr$i"
-    
+
     $SHAPEIT -check \
         -B Set2_Affected_Data_liftedSNPs"$i" \
         -M $MapFile/genetic_map_chr"$i"_combined_b37.txt \
@@ -472,7 +481,7 @@ sys.path.insert(0, '../ConfigFiles')
 
 i = 1
 for inputfile in inputfiles:
-    jobname = "shapeitrest"+str(i)+".sh"	
+    jobname = "shapeitrest"+str(i)+".sh"
     f = open(jobname,"w")
     f.write("$SHAPEIT -B All_Affected_DataSNPs"+str(i)+" -M $MapFile/genetic_map_chr"+str(i)+"_combined_b37.txt --duohm --exclude-snp gwas.alignments"+str(i)+".snp.strand.exclude -O gwas_Data.chr"+str(i)+".phased -T 8")
     f.close()
@@ -531,7 +540,7 @@ echo -e "-----------------------------------------------------------------------
 echo -e ".....................................................................Preparing jobs for submitting to Minimac for Imputation \n................................................................."
 
 #####################################################################################
-# 7) Run Minimac.py"								    #	
+# 7) Run Minimac.py"								    #
 #####################################################################################
 
 
@@ -620,7 +629,7 @@ fi
 done
 wait
 
-chmod 770*
+chmod 770 *
 echo -e "----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- \n"
 
 
@@ -679,13 +688,13 @@ wait
 
 
 #Arrange the file as in bim format
-for ((i=1;i<=22;i++)); 
+for ((i=1;i<=22;i++));
 do
 awk '{print $5 " " $3 " " $6 " " $2 " " $8 " " $9}' Annotated_Final_Imputed_Data_Chr"$i"SNPs.bim>tmp"$i"SNPs.bim &
 done
 wait
 
-for ((i=1;i<=22;i++)); 
+for ((i=1;i<=22;i++));
 do
 mv tmp"$i"SNPs.bim Chr"$i"_Data_Imputed_biallelic_Filtered.bim &
 done
@@ -702,7 +711,7 @@ echo -e "-----------------------------------------------------------------------
 # 10) Perform QC of imputed SNPs						     #
 ######################################################################################
 
-for ((i=1;i<=22;i++)); 
+for ((i=1;i<=22;i++));
 do
 if [[ -e Chr"$i"_Data_Imputed_biallelic_Filtered.bim ]]
 then
@@ -711,7 +720,7 @@ fi
 done
 wait
 
-for ((i=1;i<=22;i++)); 
+for ((i=1;i<=22;i++));
 do
 if [[ -e tmp"$i".bim ]]
 then
@@ -721,7 +730,7 @@ done
 wait
 
 
-for ((i=1;i<=22;i++)); 
+for ((i=1;i<=22;i++));
 do
 rm Annotated_Final_Imputed_Data_Chr"$i"SNPs*
 done
@@ -757,7 +766,7 @@ echo -e "If merging not successful exclude any 3+ alleles \n"
 
 if [ -e Merged_Imputed_FinalQC_SNPs_Data.missnp ]
 then
-    for ((i=1;i<=22;i++)); 
+    for ((i=1;i<=22;i++));
     do
 	$PLINK --bfile Final_Imputed"$i" --exclude Merged_Imputed_FinalQC_SNPs_Data.missnp --make-bed --out tmp_chr"$i" &
     done
@@ -780,7 +789,7 @@ then
 
 	mv Merged_Imputed_FinalQC_SNPs_Data.missnp SNPs_with_3plusalleles
 
-#Merge them again 
+#Merge them again
 
 	$PLINK --bfile $PlinkFinal --merge-list SNPsToMerge.txt --out Merged_FinalQC_SNPs_Data
 
@@ -793,7 +802,7 @@ else
 
 fi
 
-wc -l Merged_FinalQC_SNPs_Data.bim 
+wc -l Merged_FinalQC_SNPs_Data.bim
 
 if [[ -e Merged_FinalQC_SNPs_Data.bim ]]
 then
@@ -850,7 +859,7 @@ do
 	if [[ -e tmp"$i".bim ]]
 	then
 	echo ${Files[i]}
-	$PLINK --bfile tmp"$i" --recodeA --out Data_SNPfile"$i" 
+	$PLINK --bfile tmp"$i" --recodeA --out Data_SNPfile"$i"
 	rm tmp"$i"
 	fi
 done
@@ -859,4 +868,3 @@ done
 echo -e "----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- \n"
 
 echo -e "----------------------------------------------------------------Stage 2 Imputation completed successfully-------------------------------------------------------------------------- \n"
-
