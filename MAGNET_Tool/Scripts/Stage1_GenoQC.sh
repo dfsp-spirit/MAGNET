@@ -60,7 +60,7 @@ C=${AllelesRec[@]} # Save the array with alleles in 1234 format
 if [[ $A == $B || $C ]] ; then #Check if the study alleles are ACGT/1234
     echo -e "...Alleles are correctly coded... \n"
 else
-    echo -e "...In Stage 1 QC:Alles are not correctly coded the code will exit, please read the manual for allele coding, provide ACGT coding and run the program again...">> $MAGNET/MAIN_DIR/Warnings.txt
+    echo -e "...In Stage 1 QC:Alles are not correctly coded the code will exit, please read the manual for allele coding, provide ACGT coding and run the program again..." | tee -a $MAGNET/MAIN_DIR/Warnings.txt
 exit;
 fi;
 
@@ -82,7 +82,7 @@ else
 	echo "..... $SamplesToQC.ped exists"
 	convert="true"
     else
-	echo ".....In Stage 1 QC:$SamplesToQC.fam or $SamplesToQC.ped  does not exist; program exits">> $MAGNET/MAIN_DIR/Warnings.txt
+	echo ".....In Stage 1 QC:$SamplesToQC.fam or $SamplesToQC.ped  does not exist; program exits" | tee -a $MAGNET/MAIN_DIR/Warnings.txt
 	exit;
     fi
 fi
@@ -95,7 +95,7 @@ then
 	then
 	$PLINK --file $SamplesToQC --make-bed --out $installationDir/OUTPUT_DIR/Stage1_GenoQC/QC1.1
 	else
-	echo "In Stage 1 QC:$SamplesToQC.map file does not exist. program exits">> $MAGNET/MAIN_DIR/Warnings.txt
+	echo "In Stage 1 QC:$SamplesToQC.map file does not exist. program exits" | tee -a $MAGNET/MAIN_DIR/Warnings.txt
 	exit;
     fi
 wait
@@ -105,7 +105,7 @@ else
     then
 	echo ".....$SamplesToQC.bim exists"
     else
-	echo ".....In Stage 1 QC:$SamplesToQC.bim does not exist; program exits">> $MAGNET/MAIN_DIR/Warnings.txt
+	echo ".....In Stage 1 QC:$SamplesToQC.bim does not exist; program exits" | tee -a $MAGNET/MAIN_DIR/Warnings.txt
 	exit;
     fi
 wait
@@ -117,7 +117,7 @@ wait
 	cp $SamplesToQC.bim $installationDir/OUTPUT_DIR/Stage1_GenoQC/QC1.1.bim
 	cp $SamplesToQC.fam $installationDir/OUTPUT_DIR/Stage1_GenoQC/QC1.1.fam
     else
-	echo ".....In Stage 1 QC:$SamplesToQC.bed does not exist; program exits">> $MAGNET/MAIN_DIR/Warnings.txt
+	echo ".....In Stage 1 QC:$SamplesToQC.bed does not exist; program exits" | tee -a $MAGNET/MAIN_DIR/Warnings.txt
 	exit;
     fi
 fi
@@ -247,13 +247,13 @@ then
       echo -e "
 >>>> Your file has" $NAgend "unknown samples \n
 
->>>> Your data consists of samples without any gender annotated, if you wish to correct for them, please rerun the analysis after correcting them else analysis will continue with them \n">> $MAGNET/MAIN_DIR/Warnings.txt
+>>>> Your data consists of samples without any gender annotated, if you wish to correct for them, please rerun the analysis after correcting them else analysis will continue with them \n" | tee -a $MAGNET/MAIN_DIR/Warnings.txt
 
 		  #rename QC1 QC2 QC1.*;
 		  mv QC1.bim QC2.bim
            	  mv QC1.bed QC2.bed
 	    	  mv QC1.fam QC2.fam
-		  echo -e ".....samples with unknown gender will not be considered further \n";>> $MAGNET/MAIN_DIR/Warnings.txt
+		  echo -e ".....samples with unknown gender will not be considered further \n" | tee -a $MAGNET/MAIN_DIR/Warnings.txt
 		  NAupdate=1
 else
     NAupdate=0
@@ -279,7 +279,7 @@ sleep 1
 
 			>>>> Your data has" $Badgend "samples with gender inconsistencies, if you wish to correct for them, please rerun the analysis after correcting them \n
 
-			>>>> As per default option, samples with gender inconsistencies will be removed \n">> $MAGNET/MAIN_DIR/Warnings.txt
+			>>>> As per default option, samples with gender inconsistencies will be removed \n" | tee -a $MAGNET/MAIN_DIR/Warnings.txt
 
 
 		awk {'print($1 "\t"  $2)'} QC2_BadGender.txt > QC2_BadGender_removed.txt;
@@ -292,16 +292,16 @@ sleep 1
 		then
 			echo -e "........$Badgend Samples with gender incongruencies were succesfully  removed \n";
 		else
-			echo -e ".....update of gender incongruencies failed pelase check plinkoutput_QC3.log \n";>> $MAGNET/MAIN_DIR/Warnings.txt
+			echo -e ".....update of gender incongruencies failed pelase check plinkoutput_QC3.log \n" | tee -a $MAGNET/MAIN_DIR/Warnings.txt
 
 		fi
 
 else
     echo ".....no gender discrepancies detected"
     #rename QC2 QC3 QC2.*
-    		  mv QC2.bim QC3.bim
-           	  mv QC2.bed QC3.bed
-	    	  mv QC2.fam QC3.fam
+    mv QC2.bim QC3.bim
+    mv QC2.bed QC3.bed
+	  mv QC2.fam QC3.fam
 fi
 sleep 1
 
@@ -310,6 +310,10 @@ sleep 1
 echo											 "...Final Sexcheck..."
 
 $PLINK --bfile QC3 --check-sex --out QC4_Sexcheck
+
+if [ ! -f QC4_Sexcheck ]; then
+	  echo "The sex check file QC4_Sexcheck was not generated, maybe no loci on sex chromosomes. Check above for errors." | tee -a $MAGNET/MAIN_DIR/Warnings.txt
+fi
 
 grep "PROBLEM" QC4_Sexcheck.sexcheck | awk '$3 == 0' > QC4_NAGender.txt
 grep "PROBLEM" QC4_Sexcheck.sexcheck | awk '$3 != 0' > QC4_BadGender.txt
@@ -322,7 +326,7 @@ sleep 1
 echo "...Report Missing Gender Handling:"
 
 if [ $NAupdate == 1 ]
-then echo ".....$prob0 samples without annotated gender will not be considered further";>> $MAGNET/MAIN_DIR/Warnings.txt
+then echo ".....$prob0 samples without annotated gender will not be considered further" | tee -a $MAGNET/MAIN_DIR/Warnings.txt
 fi
 sleep 1
 
@@ -338,7 +342,7 @@ if [ $prob0 -gt 0 ]
 then
 	echo -e ".....there are still $prob0 gender incongruencies \n"
 
-    	echo -e ".....samples written to QC4_Badgender.txt; please check manually; program exits here \n";>> $MAGNET/MAIN_DIR/Warnings.txt
+    	echo -e ".....samples written to QC4_Badgender.txt; please check manually; program exits here \n" | tee -a $MAGNET/MAIN_DIR/Warnings.txt
      	exit;
 else
 	echo -e ".....No gender incongruencies remained after cleaning files \n";
@@ -391,8 +395,8 @@ sleep 1
 
 if [ $inbrd -gt 0 ]
 then
-    echo -e '>>>The following individuals have high inbred scores \n'>> $MAGNET/MAIN_DIR/Warnings.txt
-    cat QC4_inbredIDs.txt>> $MAGNET/MAIN_DIR/Warnings.txt
+    echo -e '>>>The following individuals have high inbred scores \n' | tee -a $MAGNET/MAIN_DIR/Warnings.txt
+    cat QC4_inbredIDs.txt | tee -a $MAGNET/MAIN_DIR/Warnings.txt
 
     echo ".....$inbrd samples will be removed"
 		  awk {'print $1 " " $2'} QC4_inbredIDs.txt > Inbred_samples_removed.txt
@@ -409,9 +413,9 @@ then
 else
     echo -e "...no samples needed to be removed due to inbreeding \n"
     #rename QC4 QC5 QC4.*
-    		  mv QC4.bim QC5.bim
-           	  mv QC4.bed QC5.bed
-	    	  mv QC4.fam QC5.fam
+    mv QC4.bim QC5.bim
+    mv QC4.bed QC5.bed
+	  mv QC4.fam QC5.fam
     echo -e "...QC5 passed \n"
 fi
 sleep 1
@@ -454,9 +458,9 @@ sleep 1
 # clean all files
 
 #rename QC7 QC8 QC7.*
-    		  mv QC7.bim QC8.bim
-           	  mv QC7.bed QC8.bed
-	    	  mv QC7.fam QC8.fam
+mv QC7.bim QC8.bim
+mv QC7.bed QC8.bed
+mv QC7.fam QC8.fam
 
 read ind filename <<< $(wc -l  QC8.fam)
 read snps filename <<< $(wc -l  QC8.bim)
@@ -484,7 +488,7 @@ if [ -e  QC8_Relcheck.genome ]
 then
     echo -e 									"....relcheck is succesfully finished.... \n"
 else
-    echo -e						 "...there were some major issues with your data. For details check QC8_Relcheck.log... \n">> $MAGNET/MAIN_DIR/Warnings.txt
+    echo -e						 "...there were some major issues with your data. For details check QC8_Relcheck.log... \n" | tee -a $MAGNET/MAIN_DIR/Warnings.txt
 fi
 sleep 1
 
@@ -512,7 +516,7 @@ echo ">>> One duplicated individual will be deleted"
 	    then
 		echo -e "...$(cat QC8_Relcheck.duplicates| wc -l) Samples were deleted. Samples written to QC8_duplicatesDeleted.txt \n"
 	    else
-		echo -e "...there were some issues with deleting duplicated samples, for more details please check plinkoutput_QC8.1_rmDupls.log \n">> $MAGNET/MAIN_DIR/Warnings.txt
+		echo -e "...there were some issues with deleting duplicated samples, for more details please check plinkoutput_QC8.1_rmDupls.log \n" | tee -a $MAGNET/MAIN_DIR/Warnings.txt
 	    fi
 
 	    mv 	QC8.bim QC9.bim
@@ -547,7 +551,7 @@ echo -e ">>> Deleting families with discordant relation status..... \n"
 	    then
 		echo -e ".....$NnotPO Samples were deleted. Samples written to RmIndividuals_QC9.txt\n"
 	    else
-		echo -e ".....there were some issues with deleting not related families. For more details please check plinkoutput_QC9.1_rmNotPO.log \n">> $MAGNET/MAIN_DIR/Warnings.txt
+		echo -e ".....there were some issues with deleting not related families. For more details please check plinkoutput_QC9.1_rmNotPO.log \n" | tee -a $MAGNET/MAIN_DIR/Warnings.txt
 		echo -e "... program is terminated \n"
 		exit;
 	    fi;
@@ -579,12 +583,12 @@ NCroFamsR=$(cat CrossfamRelations.txt | wc -l)
 
 cat  CrossfamRelations.txt
 
-echo -e 				      "...There are $NCroFamsR 3rd degree or closer Relations across families. Families  written to  CrossfamRelations.txt...\n"  >> $MAGNET/MAIN_DIR/Warnings.txt
+echo -e 				      "...There are $NCroFamsR 3rd degree or closer Relations across families. Families  written to  CrossfamRelations.txt...\n"  | tee -a $MAGNET/MAIN_DIR/Warnings.txt
 
 
 
 
-echo -e 					">>> You can check the output and rerun the analysis otherwise the program by default deleted one of the two families <<< \n">> $MAGNET/MAIN_DIR/Warnings.txt
+echo -e 					">>> You can check the output and rerun the analysis otherwise the program by default deleted one of the two families <<< \n" | tee -a $MAGNET/MAIN_DIR/Warnings.txt
 
 	    awk '{print $1}' CrossfamRelations.txt | sort -u > temp
 
@@ -599,7 +603,7 @@ echo -e 					">>> You can check the output and rerun the analysis otherwise the 
 		echo -e							".....$fams Families were deleted. Samples written to RmIndividuals_QC8.txt.....\n"
 		cat temp
 	    else
-		echo -e				  ".....there were some issues with deleting related families. For more details please check plinkoutput_QC8.1_rmNotPO.log">> $MAGNET/MAIN_DIR/Warnings.txt
+		echo -e				  ".....there were some issues with deleting related families. For more details please check plinkoutput_QC8.1_rmNotPO.log" | tee -a $MAGNET/MAIN_DIR/Warnings.txt
 		echo -e										"...program is terminated... \n"
 	    fi
 
@@ -678,7 +682,7 @@ hapmap=$Hapmapfile
 
     if [ ! -e $hapmap.fam ] || [ ! -e $hapmap.bim ] || [ ! -e $hapmap.bed ]
     then
-	echo -e "...$hapmap files do not exist, the program will exit. Please download the hapmap files from the link provided in the user manual and rerun the analysis again... \n">> $MAGNET/MAIN_DIR/Warnings.txt
+	echo -e "...$hapmap files do not exist, the program will exit. Please download the hapmap files from the link provided in the user manual and rerun the analysis again... \n" | tee -a $MAGNET/MAIN_DIR/Warnings.txt
 	exit;
     else
 	echo -e "...$hapmap files found... \n"
@@ -803,6 +807,12 @@ echo -e 				"...Stage 1 of Genotype QC is successfully completed...\n"
 mv QC12.fam FinalQC_Study.fam
 mv QC12.bed FinalQC_Study.bed
 mv QC12.bim FinalQC_Study.bim
+
+if [ -f FinalQC_Study.fam -a -f FinalQC_Study.bed -a -f FinalQC_Study.bim ]; then
+	echo "Final output files exist."
+else
+	echo -e "Final output files do not exist, please check output above and logs for errors.\n" | tee -a $MAGNET/MAIN_DIR/Warnings.txt
+fi
 
 #Remove all the uncessary files
 
