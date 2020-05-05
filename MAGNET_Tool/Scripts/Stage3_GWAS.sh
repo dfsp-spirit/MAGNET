@@ -1,9 +1,14 @@
-#!/bin/bash 
+#!/bin/bash
 
-LocSource=$(pwd) 
+LocSource=$(pwd)
 
 source /$LocSource/ConfigFiles/Tools.config
 source /$LocSource/ConfigFiles/Thresholds.config
+
+if [ ! -d "OUTPUT_DIR/Stage3_GWAS" ]; then
+  echo "Directory 'OUTPUT_DIR/Stage3_GWAS' not found, exiting."
+  exit 1
+fi
 
 cd OUTPUT_DIR/Stage3_GWAS
 
@@ -57,9 +62,9 @@ njobs=$(ls -l ../Stage2_GenoImpute/Data_SNPfile*.raw|wc -l)
 
 for j in $(seq 12 12 $njobs); do
     lower=$(expr "$j" - 11)
-    upper=$j    
-    
-    for i in $(seq $lower $upper); do 
+    upper=$j
+
+    for i in $(seq $lower $upper); do
     ./job_"$i"_factor.sh > prg"$i".out  2>&1 &
 	sleep 1
     done;
@@ -126,7 +131,7 @@ sed 's/ /\t/g' Complete_SNP_info2$pheno>Complete_SNP_info_$pheno
 
 ColManhattan="#c51b8a"
 pheno=$pheno
-R --no-save --slave --args $pheno $ColManhattan $snpsOfInterest < ../../../Scripts/Manhattanplot.R 
+R --no-save --slave --args $pheno $ColManhattan $snpsOfInterest < ../../../Scripts/Manhattanplot.R
 
 
 
@@ -165,7 +170,7 @@ print len(inputfiles)
 
 
 for i in range(1,23):
-    jobname ="../../Scripts/MAGMAChr"+str(i)+".sh"	
+    jobname ="../../Scripts/MAGMAChr"+str(i)+".sh"
     f = open(jobname,"w")
     f.write("magma --bfile $MagmaRef \
         --pval SNP_Pvalue$pheno N=$MagmaN \
@@ -197,7 +202,7 @@ echo "all processes started"
 wait
 
 echo "all processes ended"
-    
+
 rm MAGMAChr*.sh
 
 chmod 770 *
@@ -219,6 +224,3 @@ echo -e  "overal $Nsig genes passed permutation p-value treshold of $MagmaPERMP\
 echo -e  "File saved to $pheno.Significant.txt"
 
 cat $pheno.SignificantGenes.txt
-
-
-
